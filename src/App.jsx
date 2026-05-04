@@ -226,7 +226,7 @@ export default function Spark() {
     <div style={{...R,minHeight:"100dvh"}}>
       <style>{G}</style>
       <div style={{padding:"28px 20px 20px",textAlign:"center",borderBottom:"1px solid rgba(255,255,255,0.06)"}}>
-        <div style={{fontSize:36,marginBottom:8}}>\uD83C\uDFAF</div>
+        <div style={{marginBottom:8}}></div>
         <h1 style={{fontFamily:"'Syne',sans-serif",fontSize:26,fontWeight:800,letterSpacing:"-0.02em",marginBottom:8}}>Your Results</h1>
         {res.insight&&<p style={{color:"#64748b",fontSize:13,lineHeight:1.7,fontStyle:"italic",maxWidth:340,margin:"0 auto"}}>"{res.insight}"</p>}
       </div>
