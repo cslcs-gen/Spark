@@ -63,7 +63,9 @@ export default function Spark() {
   }
 
   async function go(all) {
-    if (!API_KEY) {
+    // Strip whitespace that can corrupt the key
+    const key = (API_KEY || "").replace(/\s/g, "");
+    if (!key) {
       setErr("API key not set. Add VITE_ANTHROPIC_API_KEY in Vercel environment variables.");
       setStep("quiz"); setCur(questions.length-1);
       return;
@@ -90,7 +92,7 @@ export default function Spark() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "x-api-key": API_KEY,
+          "x-api-key": key,
           "anthropic-version": "2023-06-01",
           "anthropic-dangerous-direct-browser-access": "true",
         },
