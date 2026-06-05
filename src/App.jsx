@@ -21,8 +21,6 @@ const SV = {
   low:   { bg:"rgba(59,130,246,0.15)", color:"#60a5fa" },
 };
 
-const API_KEY = import.meta.env.VITE_ANTHROPIC_API_KEY;
-
 function xj(t) {
   try { return JSON.parse(t.trim()); } catch (_) {}
   const s = t.replace(/^```(?:json)?\s*/i,"").replace(/\s*```\s*$/i,"").trim();
@@ -50,7 +48,8 @@ export default function Spark() {
 
   function next() {
     if (!draft.trim()) return;
-    const u = { ...ans, [q.id]: { question:q.text, category:q.category, answer:draft.trim() } };
+    const answer = draft.trim().slice(0, 500); // cap at 500 chars server mirrors this
+    const u = { ...ans, [q.id]: { question:q.text, category:q.category, answer } };
     setAns(u); setDraft("");
     if (cur + 1 < questions.length) setCur(c => c+1);
     else go(u);
@@ -63,13 +62,6 @@ export default function Spark() {
   }
 
   async function go(all) {
-    // Strip whitespace that can corrupt the key
-    const key = (API_KEY || "").replace(/\s/g, "");
-    if (!key) {
-      setErr("API key not set. Add VITE_ANTHROPIC_API_KEY in Vercel environment variables.");
-      setStep("quiz"); setCur(questions.length-1);
-      return;
-    }
     setStep("loading"); setErr(null);
 
     const lines = Object.values(all)
@@ -88,27 +80,27 @@ export default function Spark() {
     ].join("\n");
 
     try {
-      const r = await fetch("https://api.anthropic.com/v1/messages", {
+      // Key lives on the server — never exposed to the browser
+      const r = await fetch("/api/analyse", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-api-key": key,
-          "anthropic-version": "2023-06-01",
-          "anthropic-dangerous-direct-browser-access": "true",
-        },
-        body: JSON.stringify({ model:"claude-sonnet-4-20250514", max_tokens:1200, messages:[{role:"user",content:prompt}] }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt }),
       });
-      if (!r.ok) { const eb = await r.json().catch(()=>({})); throw new Error("API "+r.status+": "+(eb?.error?.message||r.statusText)); }
+
+      if (!r.ok) {
+        const eb = await r.json().catch(() => ({}));
+        throw new Error(eb?.error || "Request failed (" + r.status + "). Please try again.");
+      }
+
       const d = await r.json();
-      if (d.type==="error") throw new Error("API: "+(d.error?.message||"unknown"));
-      const raw = (d.content||[]).find(b=>b.type==="text");
-      if (!raw?.text) throw new Error("Empty response. Please try again.");
-      const p = xj(raw.text);
-      if (!p.problems||!p.ideas) throw new Error("Unexpected response. Please try again.");
+      if (!d.text) throw new Error("Empty response. Please try again.");
+      const p = xj(d.text);
+      if (!p.problems || !p.ideas) throw new Error("Unexpected response. Please try again.");
       setRes(p); setStep("results");
+
     } catch(e) {
       console.error(e);
-      setErr(e.message||"Something went wrong. Please try again.");
+      setErr(e.message || "Something went wrong. Please try again.");
       setStep("quiz"); setCur(questions.length-1);
     }
   }
